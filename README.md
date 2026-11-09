@@ -1,6 +1,6 @@
 # HyperStyler
 
-Official code for **HyperStyler: Low-resource Authorship Style Transfer via Context-aware Style Navigation and Hypernetworks** (EMNLP 2026).
+Official code for **HyperStyler: Low-resource Authorship Style Transfer via Context-aware Style Navigation and Hypernetworks** (EMNLP 2026) [paper](https://aclanthology.org/2026.emnlp-main.1045/).
 
 ## Repository structure
 
