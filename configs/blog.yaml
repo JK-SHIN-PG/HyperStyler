@@ -1,0 +1,98 @@
+# Blog experiment configuration.
+# Copied to <exp_dir>/config.yaml on first use; later stages read that copy.
+
+dataset: blog
+
+paths:
+  dataset: data/processed/blog/dataset_with_idx
+  author_embs_train: data/processed/blog/author_embs_train.lmdb
+  author_embs_val: data/processed/blog/author_embs_val.lmdb
+  base_checkpoint: outputs/blog/0_base/best_model.pt
+  # null: <exp_dir>/1_hyperstyler/best_model.pt
+  hyperstyler_checkpoint: null
+  generation_input: data/intermediate/blog/generation_pair_paraphrases/topp0.8_tmp1.5
+  evaluation_data: data/evaluation/blog/evaluation_dataset.json
+
+base_config:
+  model_name: google/t5-v1_1-large
+  max_encoder_len: 80
+  max_decoder_len: 80
+
+styler_config:
+  ctrl_dim: 768
+  use_hypernet: true
+  hypernet_config:
+    target_layers: [crossattn, ffn]
+    num_prefix: 5
+    rank: 32
+    parameter_efficiency_mode: false
+    bias: false
+    search_config: MHA
+    dropout: 0.1
+  use_stylonavigator: true
+  stylo_navigator_config:
+    dropout: 0.1
+    temperature: 1.0
+
+# Stage 0 (base reconstruction model, shared by the dataset's experiments)
+base_training:
+  seed: 42
+  learning_rate: 5.0e-5
+  batch_size: 32
+  accumulation_steps: 1
+  warmup_steps: 2000
+  max_steps: 100000
+  max_num_epochs: 20
+  eval_freq: 2000
+  max_val_batch: 200
+
+# Stage 1 (HyperStyler reconstruction)
+train_config:
+  seed: 42
+  max_val_batch: 200
+  learning_rate: 1.0e-4
+  batch_size: 64
+  accumulation_steps: 1
+  warmup_steps: 2000
+  max_steps: 100000
+  max_num_epochs: 100
+  eval_freq: 2000
+  freeze: [all]
+
+# Stage 2: rewrite each paraphrase toward the target author.
+generation:
+  temperature: 1.0
+  top_p: 0.8
+  num_samples: 1
+  batch_size: 20
+
+# Stage 3
+filtering:
+  max_per_row: 5
+  mis_threshold: 0.70
+  simcse_threshold: 0.70
+  away_threshold: 0.90
+  towards_threshold: 0.30
+  val_fraction: 0.05
+  split_seed: 42
+
+# Stage 4 (two GPUs; batch_size is per GPU)
+self_distillation:
+  seed: 42
+  lr: 1.0e-6
+  batch_size: 64
+  accumulation_steps: 1
+  max_num_epochs: 3
+  max_steps: 100000
+  eval_freq: 50
+  max_val_batch: 200
+  freeze_base_model: true
+  freeze_stylonavigator: false
+
+# Stage 5
+evaluation:
+  data_types: ['']   # '' = single evaluation JSON; Reddit: [random, single, diverse]
+  num_samples: 1     # >1 generates several candidates and reranks them
+  temperature: 0.8
+  top_p: 1.0
+  batch_size: 64
